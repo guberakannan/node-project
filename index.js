@@ -7,7 +7,7 @@ const bodyParser = require('body-parser');
 
 passport.use(new LocalStrategy(
     function (username, password, done) {
-        if (username === "admin@gmail.com" && password === "admin") {
+        if (username === "Covid" && password === "Dashboard") {
             return done(null, username);
         } else {
             return done("unauthorized access", false);
