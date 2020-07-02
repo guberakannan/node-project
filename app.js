@@ -42,4 +42,28 @@ require('./models/Users');
 require('./config/passport');
 app.use(require('./routes'));
 
-app.listen(3000, () => console.log('Server running on http://localhost:8000/'));
+//Error handlers & middlewares
+if(!isProduction) {
+  app.use((err, req, res) => {
+    // res.status(err.status || 500);
+    res.json({
+      errors: {
+        message: err.message,
+        error: err,
+      },
+    });
+  });
+}
+
+app.use((err, req, res) => {
+  // res.status(err.status || 500);
+  res.json({
+    errors: {
+      message: err.message,
+      error: {},
+    },
+  });
+});
+
+app.listen(3000, () => console.log('Server running on http://localhost:3000/'));
+
