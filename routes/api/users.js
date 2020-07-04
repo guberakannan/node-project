@@ -3,17 +3,18 @@ const passport = require('passport');
 const router = require('express').Router();
 const auth = require('../auth');
 const Users = mongoose.model('Users');
+const orgModel = require('../../models/organizations')
 
 //POST new user route (optional, everyone has access)
 router.post('/new-user', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
-  if(!user.email) {
+  if(!user.name) {
     return res.status(422).json({
       success : false,
       data: {},
       errors: {
-        email: 'is required',
+        name: 'is required',
       },
     });
   }
@@ -24,6 +25,26 @@ router.post('/new-user', auth.optional, (req, res, next) => {
       data: {},
       errors: {
         password: 'is required',
+      },
+    });
+  }
+
+  if(!user.designation) {
+    return res.status(422).json({
+      success : false,
+      data: {},
+      errors: {
+        designation: 'is required',
+      },
+    });
+  }
+
+  if(!user.organization) {
+    return res.status(422).json({
+      success : false,
+      data: {},
+      errors: {
+        organization: 'is required',
       },
     });
   }
@@ -40,12 +61,12 @@ router.post('/new-user', auth.optional, (req, res, next) => {
 router.post('/login', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
-  if(!user.email) {
+  if(!user.name) {
     return res.status(422).json({
       success : false,
       data: {},
       errors: {
-        email: 'is required',
+        name: 'is required',
       },
     });
   }
@@ -66,13 +87,20 @@ router.post('/login', auth.optional, (req, res, next) => {
     }
 
     if(passportUser) {
-      const user = passportUser;
-      user.token = passportUser.generateJWT();
-
-      return res.json({ 'success' : true, data: user.toAuthJSON(), errors: {} });
+      let user = passportUser;
+      user = user.toAuthJSON();
+      orgModel.findOne({name: user.organization}, {name:1, logo:1, _id:0}, (err, result)=>{
+        if(err){
+          return res.status(500).json({ 'success' : false, data: {}, errors: {} });
+        }else{
+          user.organization = result;
+          return res.json({ 'success' : true, data: user, errors: {} });
+        }
+      });
+    }else{
+      return res.status(401).json({ 'success' : false, data: {}, errors: {} });
     }
 
-    return res.status(401).json({ 'success' : false, data: {}, errors: {} });
   })(req, res, next);
 });
 
