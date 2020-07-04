@@ -26,7 +26,7 @@ app.use(cors(corsOptions));
 app.use(require('morgan')('dev'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/static', express.static(path.join(__dirname, 'public')));
 app.use(session({ secret: 'passport-kpitoday', cookie: { maxAge: 60000 }, resave: false, saveUninitialized: false }));
 
 if(!isProduction) {
