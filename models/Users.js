@@ -57,4 +57,17 @@ UsersSchema.methods.toAuthJSON = function () {
   };
 };
 
+UsersSchema.methods.verifyPassword = (password, salt, hash) => {
+  const hashUserInput = crypto.pbkdf2Sync(password, salt, 10000, 512, 'sha512').toString('hex');
+  return hashUserInput === hash;
+};
+
+UsersSchema.methods.getUser = function () {
+  return {
+    name: this.name,
+    salt: this.salt,
+    hash: this.hash
+  };
+};
+
 mongoose.model('Users', UsersSchema);

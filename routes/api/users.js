@@ -49,9 +49,12 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     });
   }
 
-  const finalUser = new Users(user);
+  let userPwd = user.password;
 
-  finalUser.setPassword(user.password);
+  delete user.password
+  const finalUser = new Users(user);
+  
+  finalUser.setPassword(userPwd);
 
   return finalUser.save()
     .then(() => res.json({ success : true, data: finalUser.toAuthJSON(), errors: {} }));
@@ -116,6 +119,28 @@ router.get('/current', auth.required, (req, res, next) => {
 
       return res.json({ 'success' : true, data: user.toAuthJSON(), errors: {} });
     });
+});
+
+router.put('/change-password', auth.required, (req, res, next) => {
+
+  let reqBody = req.body;
+  let password = reqBody.currentPassword;
+
+  const userRecord = Users.findById(req.user.id)
+    .then((userinfo) => {
+      let userRecord = new Users(userinfo)
+      let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
+      
+      if(validated){
+        userRecord.setPassword(reqBody.password);
+
+        return userRecord.save()
+          .then(() => res.json({ success : true, data: userRecord.toAuthJSON(), errors: {} }));
+      }else{
+        return res.status(400).json({ success : false, data: {}, errors: {} })
+      }
+    });
+
 });
 
 module.exports = router;
