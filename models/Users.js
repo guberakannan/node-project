@@ -19,10 +19,11 @@ const UsersSchema = new Schema({
     type: String,
     required: true
   },
+  permittedModules: [],
   hash: String,
   salt: String,
 }, {
-  strict: false
+  strict: true
 });
 
 UsersSchema.methods.setPassword = function (password) {
@@ -53,6 +54,7 @@ UsersSchema.methods.toAuthJSON = function () {
     name: this.name,
     designation: this.designation,
     organization: this.organization,
+    modules: this.permittedModules,
     token: this.generateJWT(),
   };
 };

@@ -5,7 +5,7 @@ const auth = require('../auth');
 const Users = mongoose.model('Users');
 const orgModel = require('../../models/organizations')
 
-//POST new user route (optional, everyone has access)
+// create new user route
 router.post('/new-user', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
@@ -60,7 +60,7 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     .then(() => res.json({ success : true, data: finalUser.toAuthJSON(), errors: {} }));
 });
 
-//POST login route (optional, everyone has access)
+// user login route
 router.post('/login', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
@@ -107,26 +107,12 @@ router.post('/login', auth.optional, (req, res, next) => {
   })(req, res, next);
 });
 
-//GET current route (required, only authenticated users have access)
-router.get('/current', auth.required, (req, res, next) => {
-  const { payload: { id } } = req;
-
-  return Users.findById(id)
-    .then((user) => {
-      if(!user) {
-        return res.sendStatus(400);
-      }
-
-      return res.json({ 'success' : true, data: user.toAuthJSON(), errors: {} });
-    });
-});
-
+// Change Password route
 router.put('/change-password', auth.required, (req, res, next) => {
 
   let reqBody = req.body;
   let password = reqBody.currentPassword;
-
-  const userRecord = Users.findById(req.user.id)
+  Users.findById(req.user.id)
     .then((userinfo) => {
       let userRecord = new Users(userinfo)
       let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
@@ -140,7 +126,19 @@ router.put('/change-password', auth.required, (req, res, next) => {
         return res.status(400).json({ success : false, data: {}, errors: {} })
       }
     });
+});
 
+router.put('/user-module', auth.optional, (req, res, next) => {
+
+  let reqBody = req.body;
+
+  Users.update({_id: reqBody.id}, {permittedModules: reqBody.permittedModules}, (err, result) => {
+    if(err){
+      res.status(500).json({ success : false, data: {}, errors: err });
+    }else{
+      res.status(200).json({ success : true, data: {}, errors: {} });
+    }
+  });
 });
 
 module.exports = router;
