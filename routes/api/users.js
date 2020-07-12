@@ -142,3 +142,4 @@ router.put('/user-module', auth.optional, (req, res, next) => {
 });
 
 module.exports = router;
+
