@@ -9,9 +9,9 @@ const orgModel = require('../../models/organizations')
 router.post('/new-user', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
-  if(!user.name) {
+  if (!user.name) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         name: 'is required',
@@ -19,9 +19,9 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     });
   }
 
-  if(!user.password) {
+  if (!user.password) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         password: 'is required',
@@ -29,9 +29,9 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     });
   }
 
-  if(!user.designation) {
+  if (!user.designation) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         designation: 'is required',
@@ -39,9 +39,9 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     });
   }
 
-  if(!user.organization) {
+  if (!user.organization) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         organization: 'is required',
@@ -49,24 +49,55 @@ router.post('/new-user', auth.optional, (req, res, next) => {
     });
   }
 
-  let userPwd = user.password;
+  orgModel.findOne({ name: user.organization }, { name: 1 }, (err, result) => {
+    if (result) {
+      let userPwd = user.password;
 
-  delete user.password
-  const finalUser = new Users(user);
-  
-  finalUser.setPassword(userPwd);
+      delete user.password
+      const finalUser = new Users(user);
 
-  return finalUser.save()
-    .then(() => res.json({ success : true, data: finalUser.toAuthJSON(), errors: {} }));
+      finalUser.setPassword(userPwd);
+
+      return finalUser.save()
+        .then(() => res.json({ success: true, data: finalUser.toAuthJSON(), errors: {} }))
+        .catch(function (e) {
+          if (e.code == "11000") {
+            res.status(422).json({
+              success: false,
+              data: {},
+              errors: {
+                name: 'already exists',
+              }
+            });
+          } else {
+            res.status(422).json({
+              success: false,
+              data: {},
+              errors: {
+                message: e.errmsg,
+              }
+            });
+          }
+        })
+    } else {
+      return res.status(422).json({
+        success: false,
+        data: {},
+        errors: {
+          message: "Please add organization details before adding user",
+        }
+      });
+    }
+  })
 });
 
 // user login route
 router.post('/login', auth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
-  if(!user.name) {
+  if (!user.name) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         name: 'is required',
@@ -74,9 +105,9 @@ router.post('/login', auth.optional, (req, res, next) => {
     });
   }
 
-  if(!user.password) {
+  if (!user.password) {
     return res.status(422).json({
-      success : false,
+      success: false,
       data: {},
       errors: {
         password: 'is required',
@@ -85,28 +116,55 @@ router.post('/login', auth.optional, (req, res, next) => {
   }
 
   return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
-    if(err) {
-      return res.status(500).json({ 'success' : false, data: {}, errors: {} });
+    if (err) {
+      return res.status(500).json({ 'success': false, data: {}, errors: {} });
     }
 
-    if(passportUser) {
+    if (passportUser) {
       let user = passportUser;
       user = user.toAuthJSON();
-      orgModel.findOne({name: user.organization}, {name:1, logo:1, _id:0}, (err, result)=>{
-        if(err){
-          return res.status(500).json({ 'success' : false, data: {}, errors: {} });
-        }else{
+      orgModel.findOne({ name: user.organization }, { name: 1, logo: 1, _id: 0 }, (err, result) => {
+        if (err) {
+          return res.status(500).json({ 'success': false, data: {}, errors: {} });
+        } else {
           user.organization = result;
-          return res.json({ 'success' : true, data: user, errors: {} });
+          return res.json({ 'success': true, data: user, errors: {} });
         }
       });
-    }else{
-      return res.status(401).json({ 'success' : false, data: {}, errors: {} });
+    } else {
+      return res.status(401).json({ 'success': false, data: {}, errors: {} });
     }
 
   })(req, res, next);
 });
-
+// Get all users
+router.get('/', auth.optional, (req, res, next) => {
+  Users.find({}, {}, (err, result) => {
+    if (err) {
+      res.status(500).json({ success: false, data: {}, errors: err });
+    } else {
+      res.status(200).json({ success: true, data: result, errors: {} });
+    }
+  });
+});
+// Find specific user detail
+router.get('/find', auth.optional, (req, res, next) => {
+  if (req.query && req.query != undefined && req.query != {}) {
+    Users.find(req.query, {}, (err, result) => {
+      if (err) {
+        res.status(500).json({ success: false, data: {}, errors: err });
+      } else {
+        if(result.length){
+          res.status(200).json({ success: true, data: result, errors: {} });
+        }else{
+          res.status(204).json({ success: true, data: [], errors: {} });
+        }
+      }
+    });
+  } else {
+    res.status(422).json({ success: false, data: {}, errors: { "message": "Please resend request with user parameters" } });
+  }
+});
 // Change Password route
 router.put('/change-password', auth.required, (req, res, next) => {
 
@@ -116,30 +174,31 @@ router.put('/change-password', auth.required, (req, res, next) => {
     .then((userinfo) => {
       let userRecord = new Users(userinfo)
       let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
-      
-      if(validated){
+
+      if (validated) {
         userRecord.setPassword(reqBody.password);
 
         return userRecord.save()
-          .then(() => res.json({ success : true, data: userRecord.toAuthJSON(), errors: {} }));
-      }else{
-        return res.status(400).json({ success : false, data: {}, errors: {} })
+          .then(() => res.json({ success: true, data: userRecord.toAuthJSON(), errors: {} }));
+      } else {
+        return res.status(400).json({ success: false, data: {}, errors: {} })
       }
     });
 });
-
+// update user module route
 router.put('/user-module', auth.optional, (req, res, next) => {
-
   let reqBody = req.body;
-
-  Users.update({_id: reqBody.id}, {permittedModules: reqBody.permittedModules}, (err, result) => {
-    if(err){
-      res.status(500).json({ success : false, data: {}, errors: err });
-    }else{
-      res.status(200).json({ success : true, data: {}, errors: {} });
-    }
-  });
+  if(reqBody.permittedModules != undefined){
+    Users.update({ _id: reqBody.id }, { permittedModules: reqBody.permittedModules }, (err, result) => {
+      if (err) {
+        res.status(500).json({ success: false, data: {}, errors: err });
+      } else {
+        res.status(200).json({ success: true, data: {}, errors: {} });
+      }
+    });
+  }else{
+    res.status(422).json({ success: false, data: {}, errors: { "message": "Please resend request with modules parameter" } });
+  }
 });
 
 module.exports = router;
-

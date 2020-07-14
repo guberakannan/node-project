@@ -19,6 +19,10 @@ const UsersSchema = new Schema({
     type: String,
     required: true
   },
+  lastUpdatedDate: {
+    type: Date,
+    default: Date.now
+},
   permittedModules: [],
   hash: String,
   salt: String,
@@ -51,6 +55,7 @@ UsersSchema.methods.generateJWT = function () {
 UsersSchema.methods.toAuthJSON = function () {
 
   return {
+    id: this._id,
     name: this.name,
     designation: this.designation,
     organization: this.organization,

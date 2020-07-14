@@ -7,7 +7,7 @@ const ModulesSchema = new Schema({
     required: true,
     unique:true
   },
-  createdDate: {
+  lastUpdatedDate: {
       type: Date,
       default: Date.now
   }
