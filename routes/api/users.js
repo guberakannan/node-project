@@ -2,11 +2,17 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
 const auth = require('../auth');
+const _ = require('lodash')
 const Users = mongoose.model('Users');
 const orgModel = require('../../models/organizations')
-
+const modulesModel = require('../../models/modules');
+var async = require('async');
+const { ObjectId } = mongoose.Types;
+const sdvsd = ObjectId.prototype.valueOf = function () {
+  return this.toString()
+}
 // create new user route
-router.post('/new-user', auth.optional, (req, res, next) => {
+router.post('/new-user', auth.optional, (req, res) => {
   const { body: { user } } = req;
 
   if (!user.name) {
@@ -127,8 +133,19 @@ router.post('/login', auth.optional, (req, res, next) => {
         if (err) {
           return res.status(500).json({ 'success': false, data: {}, errors: {} });
         } else {
-          user.organization = result;
-          return res.json({ 'success': true, data: user, errors: {} });
+
+          let userMods = [];
+          _.forEach(user.modules, (module) => {
+            modulesModel.findOne({title: module}, {title:1, link: 1, _id:0}, (err, moduleResponse)=>{
+              userMods.push(moduleResponse);
+              if(userMods.length == user.modules.length){
+                user.modules = userMods;
+                user.organization = result;
+                return res.json({ 'success': true, data: user, errors: {} });
+              }
+            });
+            
+          });
         }
       });
     } else {
@@ -138,7 +155,7 @@ router.post('/login', auth.optional, (req, res, next) => {
   })(req, res, next);
 });
 // Get all users
-router.get('/', auth.optional, (req, res, next) => {
+router.get('/', auth.optional, (req, res) => {
   Users.find({}, {}, (err, result) => {
     if (err) {
       res.status(500).json({ success: false, data: {}, errors: err });
@@ -148,15 +165,15 @@ router.get('/', auth.optional, (req, res, next) => {
   });
 });
 // Find specific user detail
-router.get('/find', auth.optional, (req, res, next) => {
+router.get('/find', auth.optional, (req, res) => {
   if (req.query && req.query != undefined && req.query != {}) {
     Users.find(req.query, {}, (err, result) => {
       if (err) {
         res.status(500).json({ success: false, data: {}, errors: err });
       } else {
-        if(result.length){
+        if (result.length) {
           res.status(200).json({ success: true, data: result, errors: {} });
-        }else{
+        } else {
           res.status(204).json({ success: true, data: [], errors: {} });
         }
       }
@@ -166,7 +183,7 @@ router.get('/find', auth.optional, (req, res, next) => {
   }
 });
 // Change Password route
-router.put('/change-password', auth.required, (req, res, next) => {
+router.put('/change-password', auth.required, (req, res) => {
 
   let reqBody = req.body;
   let password = reqBody.currentPassword;
@@ -186,18 +203,50 @@ router.put('/change-password', auth.required, (req, res, next) => {
     });
 });
 // update user module route
-router.put('/user-module', auth.optional, (req, res, next) => {
+router.put('/user-module', auth.optional, (req, res) => {
   let reqBody = req.body;
-  if(reqBody.permittedModules != undefined){
-    Users.update({ _id: reqBody.id }, { permittedModules: reqBody.permittedModules }, (err, result) => {
-      if (err) {
-        res.status(500).json({ success: false, data: {}, errors: err });
-      } else {
-        res.status(200).json({ success: true, data: {}, errors: {} });
+  if (reqBody.permittedModules != undefined) {
+    async.eachSeries(reqBody.permittedModules, function (module, modulescallback) {
+
+      modulesModel.findOne({ title: module }, { _id: 1 }, (err, result) => {
+        if (result) {
+          modulescallback()
+        } else {
+          return res.status(422).json({ success: false, data: {}, errors: { 'message': "Invalid Modules Sent" } });
+        }
+      });
+
+    }, function (done) {
+      Users.update({ _id: reqBody.id }, { permittedModules: reqBody.permittedModules }, (err, result) => {
+        if (err) {
+          res.status(500).json({ success: false, data: {}, errors: err });
+        } else {
+          res.status(200).json({ success: true, data: {}, errors: {}, message: "Updated Successfully" });
+        }
+      });
+    });
+
+  } else {
+    res.status(422).json({ success: false, data: {}, errors: { "message": "Please resend request with modules parameter" } });
+  }
+});
+
+router.post('/module-permission', auth.required, (req, res) => {
+  let reqBody = req.body;
+  if (reqBody.module != undefined && req.user.id != undefined) {
+    modulesModel.findOne({link: reqBody.module}, {}, (err, moduleInfo) => {
+      if(moduleInfo){
+        Users.findOne({_id: req.user.id, permittedModules: moduleInfo.title}, {}, (err, result) => {
+          if(result){
+            res.status(200).json({ success: true, data: moduleInfo.content, errors: {} });
+          }else{
+            res.status(401).json({ success: false, data: {}, errors: { "message": "Permission Denied" } });
+          }
+        })
+      }else{
+        res.status(400).json({ success: false, data: {}, errors: { "message": "Module doesn't exists" } });
       }
     });
-  }else{
-    res.status(422).json({ success: false, data: {}, errors: { "message": "Please resend request with modules parameter" } });
   }
 });
 

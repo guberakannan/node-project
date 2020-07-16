@@ -2,12 +2,19 @@ const mongoose = require('mongoose');
 const Schema  = mongoose.Schema;
 
 const ModulesSchema = new Schema({
-  name: {
+  title: {
     type: String,
     required: true,
     unique:true
   },
-  lastUpdatedDate: {
+  link:{
+    type: String,
+    required: true
+  },
+  content:{
+    type: String
+  },
+  createdDate: {
       type: Date,
       default: Date.now
   }
@@ -37,6 +44,12 @@ exports.find = (condition, projection, callback) => {
 
 exports.findOne = (condition, projection, callback) => {
     modulesModel.findOne(condition, projection, (err, result)=> {
+        callback(err, result);
+    });
+}
+
+exports.aggregate= (condition, callback) => {
+    modulesModel.aggregate(condition, (err, result)=> {
         callback(err, result);
     });
 }
