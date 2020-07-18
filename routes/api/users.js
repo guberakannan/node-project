@@ -136,7 +136,7 @@ router.post('/login', auth.optional, (req, res, next) => {
 
           let userMods = [];
           _.forEach(user.modules, (module) => {
-            modulesModel.findOne({title: module}, {title:1, link: 1, _id:0}, (err, moduleResponse)=>{
+            modulesModel.findOne({title: module}, {title:1, parent:1, link: 1, _id:0}, (err, moduleResponse)=>{
               userMods.push(moduleResponse);
               if(userMods.length == user.modules.length){
                 user.modules = userMods;

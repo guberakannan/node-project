@@ -7,6 +7,9 @@ const ModulesSchema = new Schema({
     required: true,
     unique:true
   },
+  parent:{
+    type: String
+  },
   link:{
     type: String,
     required: true
