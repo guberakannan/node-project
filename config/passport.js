@@ -7,8 +7,9 @@ const Users = mongoose.model('Users');
 passport.use(new LocalStrategy({
   usernameField: 'user[name]',
   passwordField: 'user[password]',
-}, (name, password, done) => {
-  Users.findOne({ name })
+  passReqToCallback: true
+}, (req, name, password, done) => {
+  Users.findOne({ name:name, userType : req.body.user.role})
     .then((user) => {
       if(!user || !user.validatePassword(password)) {
         return done(null, false, { errors: { 'name or password': 'is invalid' } });

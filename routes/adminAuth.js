@@ -11,13 +11,13 @@ const getTokenFromHeaders = (req) => {
 
 const auth = {
   required: jwt({
-    secret: 'Kq[=7g3QKfDTEpr',
-    userProperty: 'user',
+    secret: '_d3y%~PM.Y)jq?J',
+    userProperty: 'admin',
     getToken: getTokenFromHeaders,
   }),
   optional: jwt({
-    secret: 'Kq[=7g3QKfDTEpr',
-    userProperty: 'user',
+    secret: '_d3y%~PM.Y)jq?J',
+    userProperty: 'admin',
     getToken: getTokenFromHeaders,
     credentialsRequired: false,
   }),
