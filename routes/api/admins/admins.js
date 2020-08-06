@@ -63,6 +63,7 @@ router.post('/new-user', adminAuth.required, (req, res) => {
 
         delete user.password
         user.userType = 'admin';
+        user.permittedModules = ["admins/dynamic-tables"];
         const finalUser = new Users(user);
 
         finalUser.setPassword(userPwd);
