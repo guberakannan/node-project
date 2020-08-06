@@ -108,6 +108,22 @@ exports.fetch = (req, res) => {
     }
 }
 
+exports.fetchActive = (req, res) => {
+    try {
+        schemaModel.find({ organization: req.admin.organization, status: "active" }, { schemaIdentifier: 1, name: 1, status: 1, _id: 0 }, (err, result) => {
+            if (err) {
+                res.status(500).json({ "success": false, error: err, data: {} });
+            } else {
+                res.status(200).json({ "success": true, error: {}, data: result });
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({ "success": false, error: error, data: {} });
+    }
+}
+
+
 exports.update = async (req, res) => {
     try {
         const validationOut = await validationResult(req).formatWith(errorFormatter);
