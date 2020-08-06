@@ -8,10 +8,7 @@ const Users = mongoose.model('Users');
 const orgModel = require('../../models/organizations')
 const modulesModel = require('../../models/modules');
 var async = require('async');
-const { ObjectId } = mongoose.Types;
-const sdvsd = ObjectId.prototype.valueOf = function () {
-  return this.toString()
-}
+
 // create new user route
 router.post('/new-user', adminAuth.required, (req, res) => {
   const { body: { user } } = req;

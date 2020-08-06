@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
-const adminAuth = require('../adminAuth');
+const adminAuth = require('../../adminAuth');
 const _ = require('lodash')
-const Users = mongoose.model('Users');
-const orgModel = require('../../models/organizations')
-const modulesModel = require('../../models/modules');
+const orgModel = require('../../../models/organizations')
+const modulesModel = require('../../../models/modules');
 var async = require('async');
+const Users = mongoose.model('Users');
 
 // create new user route
 router.post('/new-user', adminAuth.required, (req, res) => {

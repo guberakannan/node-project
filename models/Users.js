@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const orgModel = require('./organizations')
 
 const { Schema } = mongoose;
 
@@ -66,6 +65,7 @@ UsersSchema.methods.generateJWT = function () {
   return jwt.sign({
     name: this.name,
     id: this._id,
+    organization: this.organization,
     exp: parseInt(expirationDate.getTime() / 1000, 10),
   }, secret);
 }
