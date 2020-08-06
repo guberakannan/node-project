@@ -1,28 +1,33 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const orgModel = require('./organizations')
 
 const { Schema } = mongoose;
 
 const UsersSchema = new Schema({
   name: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   designation: {
     type: String,
-    required: true
+    required: true,
+    default: 'Admin'
   },
   organization: {
     type: String,
-    required: true
+    required: true,
+    default: 'AmagoPro'
   },
   lastUpdatedDate: {
     type: Date,
     default: Date.now
-},
+  },
+  userType: {
+    type: String,
+    enum : ['user', 'admin'],
+    default: 'user'
+  },
   permittedModules: [],
   hash: String,
   salt: String,
@@ -44,12 +49,25 @@ UsersSchema.methods.generateJWT = function () {
   const today = new Date();
   const expirationDate = new Date(today);
   expirationDate.setDate(today.getDate() + 60);
+  let secret = "";
+  switch(this.userType){
+    case "user":
+      secret = "Kq[=7g3QKfDTEpr";
+      break;
+    case "admin":
+      secret = "_d3y%~PM.Y)jq?J";
+      break;
+    default:
+      secret = "Kq[=7g3QKfDTEpr";
+      break;
+  }
 
   return jwt.sign({
     name: this.name,
     id: this._id,
+    organization: this.organization,
     exp: parseInt(expirationDate.getTime() / 1000, 10),
-  }, 'secret');
+  }, secret);
 }
 
 UsersSchema.methods.toAuthJSON = function () {
@@ -76,5 +94,13 @@ UsersSchema.methods.getUser = function () {
     hash: this.hash
   };
 };
+
+exports.findOne = (condition, projection, callback) => {
+  const userModel = mongoose.model('Users', UsersSchema);
+  
+  userModel.findOne(condition, projection, (err, result)=> {
+      callback(err, result);
+  });
+}
 
 mongoose.model('Users', UsersSchema);

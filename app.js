@@ -5,9 +5,10 @@ const session = require('express-session');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const errorHandler = require('errorhandler');
-
+const expressValidator = require('express-validator')
 //Configure mongoose's promise to global promise
 mongoose.promise = global.Promise;
+require('./config/db');
 
 //Configure isProduction variable
 const isProduction = process.env.NODE_ENV === 'production';
@@ -28,14 +29,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use('/api/static', express.static(path.join(__dirname, 'public')));
 app.use(session({ secret: 'passport-kpitoday', cookie: { maxAge: 60000 }, resave: false, saveUninitialized: false }));
+app.use(expressValidator())
 
 if(!isProduction) {
   app.use(errorHandler());
 }
-
-//Configure Mongoose
-mongoose.connect('mongodb://localhost/passportproject');
-mongoose.set('debug', true);
 
 //Models & routes
 require('./models/Users');
@@ -59,7 +57,7 @@ app.use((err, req, res) => {
   // res.status(err.status || 500);
   res.json({
     errors: {
-      message: err.message,
+      message: 'Internal server Error',
       error: {},
     },
   });

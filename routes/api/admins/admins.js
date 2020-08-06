@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 const passport = require('passport');
 const router = require('express').Router();
-const auth = require('../auth');
-const adminAuth = require('../adminAuth');
+const adminAuth = require('../../adminAuth');
 const _ = require('lodash')
-const Users = mongoose.model('Users');
-const orgModel = require('../../models/organizations')
-const modulesModel = require('../../models/modules');
+const orgModel = require('../../../models/organizations')
+const modulesModel = require('../../../models/modules');
 var async = require('async');
+const Users = mongoose.model('Users');
 
 // create new user route
 router.post('/new-user', adminAuth.required, (req, res) => {
@@ -53,7 +52,7 @@ router.post('/new-user', adminAuth.required, (req, res) => {
     });
   }
 
-  Users.findOne({ name: user.name, userType: 'user' }, { _id: 1 }, (err, result) => {
+  Users.findOne({ name: user.name, userType: 'admin' }, { _id: 1 }, (err, result) => {
     if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
 
     if (result) return res.status(422).json({ success: false, data: {}, errors: { user: 'already exists' } })
@@ -63,6 +62,7 @@ router.post('/new-user', adminAuth.required, (req, res) => {
         let userPwd = user.password;
 
         delete user.password
+        user.userType = 'admin';
         const finalUser = new Users(user);
 
         finalUser.setPassword(userPwd);
@@ -100,9 +100,8 @@ router.post('/new-user', adminAuth.required, (req, res) => {
     })
   });
 });
-
-// user login route
-router.post('/login', auth.optional, (req, res, next) => {
+// admin login route
+router.post('/login', adminAuth.optional, (req, res, next) => {
   const { body: { user } } = req;
 
   if (!user.name) {
@@ -126,7 +125,7 @@ router.post('/login', auth.optional, (req, res, next) => {
   }
 
   // Attach user type
-  user.role = "user";
+  user.role = "admin";
   return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
     if (err) {
       return res.status(500).json({ 'success': false, data: {}, errors: {} });
@@ -151,16 +150,17 @@ router.post('/login', auth.optional, (req, res, next) => {
             });
           });
         }
-      });
+      })
+
     } else {
       return res.status(401).json({ 'success': false, data: {}, errors: {} });
     }
 
   })(req, res, next);
 });
-// Get all users
+// Get all admins
 router.get('/', adminAuth.required, (req, res) => {
-  Users.find({userType: "user"}, {}, (err, result) => {
+  Users.find({ userType: "admin" }, {}, (err, result) => {
     if (err) {
       res.status(500).json({ success: false, data: {}, errors: err });
     } else {
@@ -168,10 +168,10 @@ router.get('/', adminAuth.required, (req, res) => {
     }
   });
 });
-// Find specific user detail
+// Find specific admin detail
 router.get('/find', adminAuth.required, (req, res) => {
   if (req.query && req.query != undefined && req.query != {}) {
-    req.query.userType = "user";
+    req.query.userType = "admin";
     Users.find(req.query, {}, (err, result) => {
       if (err) {
         res.status(500).json({ success: false, data: {}, errors: err });
@@ -188,11 +188,11 @@ router.get('/find', adminAuth.required, (req, res) => {
   }
 });
 // Change Password route
-router.put('/change-password', auth.required, (req, res) => {
+router.put('/change-password', adminAuth.required, (req, res) => {
 
   let reqBody = req.body;
   let password = reqBody.currentPassword;
-  Users.findById(req.user.id)
+  Users.findById(req.admin.id)
     .then((userinfo) => {
       let userRecord = new Users(userinfo)
       let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
@@ -236,12 +236,12 @@ router.put('/user-module', adminAuth.required, (req, res) => {
   }
 });
 
-router.post('/module-permission', auth.required, (req, res) => {
+router.post('/module-permission', adminAuth.required, (req, res) => {
   let reqBody = req.body;
-  if (reqBody.module != undefined && req.user.id != undefined) {
+  if (reqBody.module != undefined && req.admin.id != undefined) {
     modulesModel.findOne({ link: reqBody.module }, {}, (err, moduleInfo) => {
       if (moduleInfo) {
-        Users.findOne({ _id: req.user.id, permittedModules: moduleInfo.title }, {}, (err, result) => {
+        Users.findOne({ _id: req.admin.id, permittedModules: moduleInfo.title }, {}, (err, result) => {
           if (result) {
             res.status(200).json({ success: true, data: moduleInfo.content, errors: {} });
           } else {
