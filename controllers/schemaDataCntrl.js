@@ -1,11 +1,10 @@
 const schemaModel = require('../models/schemas');
-const mongoose = require('mongoose');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const { header, body, validationResult } = require('express-validator/check');
-const db = require('../config/db');
 const userDefinedTablesModel = require('../models/userDefinedTables');
 const async = require('async');
+const _ = require('lodash');
 
 exports.validate = (method) => {
     switch (method) {
@@ -41,25 +40,21 @@ exports.create = async (req, res) => {
         let ws = wb.Sheets[wb.SheetNames[0]]
         let json = XLSX.utils.sheet_to_json(ws);
 
-        console.log(json)
         userDefinedTablesModel.remove(req.headers.name, {}, (err, removed) => {
             if (!err) {
-                async.eachSeries(json, function (item, cb) {
+                let inc = 0;
+                _.forEach(json, function (item) {
                     userDefinedTablesModel.create(req.headers.name, item, (err, added) => {
                         if (err) {
                             return res.status(500).json({ "success": false, error: err, data: {} });
+                        } else {
+                            inc++;
+                            if (json.length == inc) {
+                                res.status(201).json({ "success": true, error: {}, data: { message: "Updated successfully" } });
+                            }
                         }
-                        
-                        if(added){
-                            cb(null, null);
-                        }
-                        
-                    }, function (done) {
-                        console.log("cacasc")
-                        res.status(201).json({ "success": true, error: {}, data: { message: "Updated successfully" } });
-
                     });
-                });
+                })
             } else {
                 res.status(500).json({ "success": false, error: err, data: {} });
             }
