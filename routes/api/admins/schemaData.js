@@ -3,8 +3,8 @@ const schemaDataCntrl = require('../../../controllers/schemaDataCntrl')
 const adminAuth = require('../../adminAuth');
 var multer = require('multer')
 const schemaModel = require('../../../models/schemas');
-const mongoose = require('mongoose');
-const collections = require('../../../config/db')
+const mysql = require('mysql');
+const dbConnection = require('../../../config/db');
 var multerReqValidator = function (req, res, next) {
     let name = req.headers.name;
     schemaModel.isValidSchema({ name: name }).then(schema => {
@@ -12,12 +12,17 @@ var multerReqValidator = function (req, res, next) {
             return res.status(422).json({ "success": false, error: { name: "Table Name selected is not found" }, data: {} })
         }
 
-        collections.client.db.listCollections({ name: name })
-            .next(function (err, collinfo) {
-                if (!collinfo) {
-                    return res.status(500).json({ "success": false, error: { name: "Table Name selected is not found" }, data: {} })
+        let connection = mysql.createConnection(dbConnection.mysqlConn);
+        let sql = 'SHOW TABLES LIKE "' + name + '"';
+        connection.query(sql, (error, dbConnTable) => {
+            if (error) {
+                res.status(500).json({ "success": false, error: error, data: {} });
+            } else {
+                if (!dbConnTable.length) {
+                    return res.status(422).json({ "success": false, error: { name: "Table Name selected is not found" }, data: {} })
                 }
-            });
+            }
+        });
 
         next();
     });
