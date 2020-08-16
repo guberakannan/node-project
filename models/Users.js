@@ -103,4 +103,10 @@ exports.findOne = (condition, projection, callback) => {
   });
 }
 
+exports.isValid = (value) => {
+  const userModel = mongoose.model('Users', UsersSchema);
+
+  return userModel.findOne(value).then(result => { return result })
+}
+
 mongoose.model('Users', UsersSchema);
