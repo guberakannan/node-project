@@ -14,9 +14,9 @@ mongoose.connect(db.url, function(err, client) {
 exports.db = db;
 
 exports.mysqlConn = {
-    host: 'localhost',
-    user: 'root',
-    password: 'password',
+    host: 'kpitoday.czjvf16rxspy.us-east-2.rds.amazonaws.com',
+    user: 'kpitoday',
+    password: 'node-angular',
     database: 'kpitoday',
     connectionLimit: 100,
 }
