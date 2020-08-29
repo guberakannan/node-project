@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const passport = require('passport');
-const router = require('express').Router();
 const _ = require('lodash')
 const Users = mongoose.model('Users');
 const orgModel = require('../models/organizations')
+const userModel = require('../models/Users')
 const modulesModel = require('../models/modules');
 var async = require('async');
 
@@ -31,16 +31,25 @@ exports.create = async (req, res) => {
     });
   }
 
+  if (!user.password) {
+    return res.status(422).json({
+      success: false,
+      data: {},
+      errors: {
+        password: 'is required',
+      },
+    });
+  }
+
   Users.findOne({ name: user.name, userType: 'user' }, { _id: 1 }, (err, result) => {
     if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
 
-    if (result) return res.status(422).json({ success: false, data: {}, errors: { user: 'already exists' } })
+    if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User already exists' } })
 
     orgModel.findOne({ _id: user.organization }, { name: 1 }, (err, result) => {
       if (result) {
-        const userPwd = 'palUser';
         const finalUser = new Users(user);
-        finalUser.setPassword(userPwd);
+        finalUser.setPassword(user.password);
 
         return finalUser.save()
           .then(() => res.json({ success: true, data: finalUser.toAuthJSON(), errors: {} }))
@@ -75,9 +84,20 @@ exports.create = async (req, res) => {
     })
   });
 }
-// user login route
-exports.login = async (req, res, next) => {
-  const { body: { user } } = req;
+// create new user route
+exports.update = async (req, res) => {
+
+  const user = req.body;
+  
+  if (!user._id) {
+    return res.status(422).json({
+      success: false,
+      data: {},
+      errors: {
+        id: 'is required',
+      },
+    });
+  }
 
   if (!user.name) {
     return res.status(422).json({
@@ -89,12 +109,66 @@ exports.login = async (req, res, next) => {
     });
   }
 
+  if (!user.designation) {
+    return res.status(422).json({
+      success: false,
+      data: {},
+      errors: {
+        designation: 'is required',
+      },
+    });
+  }
+
+  Users.findOne({ _id: user._id, userType: 'user', organization : req.admin.organization }, { _id: 1 }, (err, result) => {
+    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' }});
+
+    if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: ' User doesnot exists' } });
+
+    userModel.update({_id: result._id}, {name: user.name, designation: user.designation, permittedModules: user.permittedModules}, (err, result) => {
+      if(err){
+        res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+      }else{
+        res.json({ 'success': true, data: {"message": "User Details Updated Successfully"}, errors: {} });
+      }
+    });
+  });
+}
+// delete user route
+exports.delete = async (req, res) => {
+  Users.findOne({ _id: req.params.user, userType: 'user', organization : req.admin.organization }, { _id: 1 }, (err, result) => {
+    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
+
+    if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } })
+
+    userModel.remove({_id: req.params.user}, (err, result) => {
+      if(err){
+        res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
+      }else{
+        res.json({ 'success': true, data: {"message": "User deleted successfully"}, errors: {} });
+      }
+    });
+  });
+}
+// user login route
+exports.login = async (req, res, next) => {
+  const { body: { user } } = req;
+
+  if (!user.name) {
+    return res.status(422).json({
+      success: false,
+      data: {},
+      errors: {
+        message: 'name is required',
+      },
+    });
+  }
+
   if (!user.password) {
     return res.status(422).json({
       success: false,
       data: {},
       errors: {
-        password: 'is required',
+        message: 'password is required',
       },
     });
   }
@@ -105,7 +179,6 @@ exports.login = async (req, res, next) => {
     if (err) {
       return res.status(500).json({ 'success': false, data: {}, errors: {} });
     }
-
     if (passportUser) {
       let user = passportUser;
       user = user.toAuthJSON();
@@ -116,7 +189,7 @@ exports.login = async (req, res, next) => {
           if(user.modules.length){
             let userMods = [];
             _.forEach(user.modules, (module) => {
-              modulesModel.findOne({ title: module }, { title: 1, parent: 1, link: 1, _id: 0 }, (err, moduleResponse) => {
+              modulesModel.findOne({ _id: module }, { title: 1, parent: 1, link: 1, _id: 0 }, (err, moduleResponse) => {
                 userMods.push(moduleResponse);
                 if (userMods.length == user.modules.length) {
                   user.modules = userMods;
@@ -138,7 +211,7 @@ exports.login = async (req, res, next) => {
 }
 // Get all users
 exports.fetch = async (req, res) => {
-  Users.find({userType: "user", organization: req.admin.organization}, {}, (err, result) => {
+  Users.find({userType: "user", organization: req.admin.organization}, {hash:0, salt:0, organization:0, __v:0, userType:0}, (err, result) => {
     if (err) {
       res.status(500).json({ success: false, data: {}, errors: err });
     } else {
@@ -175,7 +248,6 @@ exports.changePassword = async (req, res) => {
     .then((userinfo) => {
       let userRecord = new Users(userinfo)
       let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
-
       if (validated) {
         userRecord.setPassword(reqBody.password);
 
@@ -191,7 +263,6 @@ exports.updatePermissions = async (req, res) => {
   let reqBody = req.body;
   if (reqBody.permittedModules != undefined) {
     async.eachSeries(reqBody.permittedModules, function (module, modulescallback) {
-
       modulesModel.findOne({ title: module }, { _id: 1 }, (err, result) => {
         if (result) {
           modulescallback()
@@ -220,7 +291,7 @@ exports.checkPermissions = async (req, res) => {
   if (reqBody.module != undefined && req.user.id != undefined) {
     modulesModel.findOne({ link: reqBody.module }, {}, (err, moduleInfo) => {
       if (moduleInfo) {
-        Users.findOne({ _id: req.user.id, permittedModules: moduleInfo.title }, {}, (err, result) => {
+        Users.findOne({ _id: req.user.id, permittedModules: moduleInfo._id.toString() }, {}, (err, result) => {
           if (result) {
             res.status(200).json({ success: true, data: moduleInfo.content, errors: {} });
           } else {

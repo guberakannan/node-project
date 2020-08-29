@@ -109,4 +109,28 @@ exports.isValid = (value) => {
   return userModel.findOne(value).then(result => { return result })
 }
 
+exports.update = (condition, data, callback) => {
+  const userModel = mongoose.model('Users', UsersSchema);
+
+  userModel.update(condition, data, (err, result) => {
+      callback(err, result);
+  });
+}
+
+exports.updateMany = (condition, data, callback) => {
+  const userModel = mongoose.model('Users', UsersSchema);
+
+  userModel.updateMany(condition, data, (err, result) => {
+      callback(err, result);
+  });
+}
+
+exports.remove = (condition, callback) => {
+  const userModel = mongoose.model('Users', UsersSchema);
+
+  userModel.remove(condition, (err, result) => {
+      callback(err, result);
+  });
+}
+
 mongoose.model('Users', UsersSchema);
