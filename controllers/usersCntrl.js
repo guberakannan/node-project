@@ -16,7 +16,7 @@ exports.create = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        name: 'is required',
+        message: 'Email is required',
       },
     });
   }
@@ -26,7 +26,7 @@ exports.create = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        designation: 'is required',
+        message: 'Designation is required',
       },
     });
   }
@@ -36,12 +36,12 @@ exports.create = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        password: 'is required',
+        message: 'Password is required',
       },
     });
   }
 
-  Users.findOne({ name: user.name, userType: 'user' }, { _id: 1 }, (err, result) => {
+  Users.findOne({ name: user.name, userType: 'user', organization: user.organization }, { _id: 1 }, (err, result) => {
     if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
 
     if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User already exists' } })
@@ -94,7 +94,7 @@ exports.update = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        id: 'is required',
+        message: 'Invalid Data',
       },
     });
   }
@@ -104,7 +104,7 @@ exports.update = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        name: 'is required',
+        message: 'Email is required',
       },
     });
   }
@@ -114,7 +114,7 @@ exports.update = async (req, res) => {
       success: false,
       data: {},
       errors: {
-        designation: 'is required',
+        message: 'Designation is required',
       },
     });
   }

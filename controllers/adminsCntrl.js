@@ -14,13 +14,13 @@ exports.validate = (method) => {
     switch (method) {
         case 'create':
             return [
-                body('user.name', "Name is required").exists(),
+                body('user.name', "Email is required").exists(),
                 body('user.designation', "Designation is required").exists(),
                 body('user.organization', "Organization is required").exists(),
                 body('user.name').custom(val => {
                     return UsersModel.isValid({ name: val, userType: 'admin' }).then(user => {
                         if (user) {
-                            return Promise.reject('Name already taken. Please choose another one');
+                            return Promise.reject('Email already taken. Please choose another one');
                         }
                     });
                 }),
@@ -35,7 +35,7 @@ exports.validate = (method) => {
             break;
         case 'login':
             return [
-                body('user.name', "Name is required").exists(),
+                body('user.name', "Email is required").exists(),
                 body('user.password', "Password is required").exists(),
 
             ]
@@ -95,11 +95,8 @@ exports.create = async (req, res) => {
                         }
                     })
             }
-
-        })
-
+        });
     } catch (error) {
-        console.log(error)
         res.status(500).json({ "success": false, error: error, data: {} })
     }
 };
@@ -154,7 +151,6 @@ exports.login = async (req, res, next) => {
         })(req, res, next);
 
     } catch (error) {
-        console.log(error)
         res.status(500).json({ "success": false, error: error, data: {} })
     }
 };
