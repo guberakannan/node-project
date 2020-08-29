@@ -3,7 +3,7 @@ const adminAuth = require('../../adminAuth');
 const adminsCntrl = require('../../../controllers/adminsCntrl')
 
 // create new user route
-router.post('/new-user', adminAuth.required,  adminsCntrl.validate('create'), adminsCntrl.create);
+router.post('/new-user', adminAuth.optional,  adminsCntrl.validate('create'), adminsCntrl.create);
 // admin login route
 router.post('/login', adminAuth.optional, adminsCntrl.validate('login'), adminsCntrl.login);
 // Get all admins
