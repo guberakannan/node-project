@@ -3,7 +3,6 @@ const Users = mongoose.model('Users');
 const passport = require('passport');
 const UsersModel = require('../models/Users');
 const orgModel = require('../models/organizations');
-const modulesModel = require('../models/modules');
 const _ = require('lodash')
 const { body, validationResult } = require('express-validator/check');
 const errorFormatter = ({ location, msg, param, value, nestedErrors }) => {
@@ -67,7 +66,6 @@ exports.create = async (req, res) => {
 
                 let userPwd = "palAdmin";
                 user.userType = 'admin';
-                user.permittedModules = ["admins/dynamic-tables"];
                 user.organization = result._id;
                 const finalUser = new Users(user);
 
@@ -127,19 +125,10 @@ exports.login = async (req, res, next) => {
                         return res.status(500).json({ 'success': false, data: {}, errors: {} });
                     } else {
                         if (result) {
-                            let userMods = [];
-                            _.forEach(user.modules, (module) => {
-                                modulesModel.findOne({ title: module }, { title: 1, parent: 1, link: 1, _id: 0 }, (err, moduleResponse) => {
-                                    userMods.push(moduleResponse);
-                                    if (userMods.length == user.modules.length) {
-                                        user.modules = userMods;
-                                        user.organization = result;
-                                        return res.json({ 'success': true, data: user, errors: {} });
-                                    }
-                                });
-                            });
+                            user.organization = result;
+                            res.json({ 'success': true, data: user, errors: {} });
                         } else {
-                            return res.status(400).json({ 'success': false, data: {}, errors: { "message": "organization not found" } });
+                            res.status(400).json({ 'success': false, data: {}, errors: { "message": "organization not found" } });
                         }
                     }
                 });
