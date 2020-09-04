@@ -55,13 +55,13 @@ exports.create = async (req, res) => {
     try {
         const validResult = await validationResult(req).formatWith(errorFormatter);
         if (!validResult.isEmpty()) {
-            res.status(422).json({ "success": false, error: validResult.array()[0], data: {} });
+            res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
             return;
         }
 
         orgModel.findOne({ name: req.body.user.organization }, { _id: 1 }, (err, result) => {
             if (err) {
-                res.status(500).json({ "success": false, error: err, data: {} });
+                res.status(500).json({ "success": false, errors: err, data: {} });
             } else {
                 const { body: { user } } = req;
 
@@ -81,7 +81,7 @@ exports.create = async (req, res) => {
                                 success: false,
                                 data: {},
                                 errors: {
-                                    name: 'already exists',
+                                    message: 'Name already exists',
                                 }
                             });
                         } else {
@@ -96,8 +96,8 @@ exports.create = async (req, res) => {
                     })
             }
         });
-    } catch (error) {
-        res.status(500).json({ "success": false, error: error, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: {message : errors}, data: {} })
     }
 };
 
@@ -106,7 +106,7 @@ exports.login = async (req, res, next) => {
     try {
         const validResult = await validationResult(req).formatWith(errorFormatter);
         if (!validResult.isEmpty()) {
-            res.status(422).json({ "success": false, error: validResult.array()[0], data: {} });
+            res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
             return;
         }
 
@@ -150,8 +150,8 @@ exports.login = async (req, res, next) => {
 
         })(req, res, next);
 
-    } catch (error) {
-        res.status(500).json({ "success": false, error: error, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: errors, data: {} })
     }
 };
 
@@ -190,7 +190,7 @@ exports.changePassword = async (req, res) => {
     try {
         const validResult = await validationResult(req).formatWith(errorFormatter);
         if (!validResult.isEmpty()) {
-            res.status(422).json({ "success": false, error: validResult.array()[0], data: {} });
+            res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
             return;
         }
         let reqBody = req.body;
@@ -212,7 +212,7 @@ exports.changePassword = async (req, res) => {
             .catch(function (e) {
                 return res.status(500).json({ success: false, data: {}, errors: e })
             });
-    } catch (error) {
-        return res.status(500).json({ success: false, data: {}, errors: e })
+    } catch (errors) {
+        return res.status(500).json({ success: false, data: {}, errors: errors })
     }
 };

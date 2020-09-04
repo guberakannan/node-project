@@ -7,17 +7,15 @@ router.get('/', adminAuth.required, usersCntrl.fetch);
 // Find specific user detail
 router.get('/find', adminAuth.required, usersCntrl.find);
 // create new user route
-router.post('/', adminAuth.required, usersCntrl.create);
+router.post('/', adminAuth.required, usersCntrl.validate('create'), usersCntrl.create);
 // Update User
-router.put('/', adminAuth.required, usersCntrl.update);
+router.put('/', adminAuth.required, usersCntrl.validate('update'), usersCntrl.update);
 // Delete User
 router.delete('/:user', adminAuth.required, usersCntrl.delete);
 // user login route
-router.post('/login', auth.optional, usersCntrl.login);
+router.post('/login', auth.optional, usersCntrl.validate('login'), usersCntrl.login);
 // Change Password route
-router.put('/change-password', auth.required, usersCntrl.changePassword);
-// update user module route
-router.put('/user-module', adminAuth.required, usersCntrl.updatePermissions);
+router.put('/change-password', auth.required, usersCntrl.validate('passwordValidation'), usersCntrl.changePassword);
 
 router.post('/module-permission', auth.required, usersCntrl.checkPermissions);
 

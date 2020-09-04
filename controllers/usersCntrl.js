@@ -6,173 +6,161 @@ const orgModel = require('../models/organizations')
 const userModel = require('../models/Users')
 const modulesModel = require('../models/modules');
 var async = require('async');
+const { body, validationResult } = require('express-validator/check');
+const errorFormatter = ({ location, msg, param, value, nestedErrors }) => {
+  return `${msg}`;
+};
 
+exports.validate = (method) => {
+  switch (method) {
+    case 'create':
+      return [
+        body('user.name', "Email is required").exists(),
+        body('user.name', "Invalid Email format").isEmail(),
+        body('user.designation', "Designation is required").exists(),
+        body('user.password', "Password is required").exists(),
+        body('user.name').custom(val => {
+          return userModel.isValid({ name: val, userType: 'user' }).then(user => {
+            if (user) {
+              return Promise.reject('Email already taken. Please choose another one');
+            }
+          });
+        })
+      ]
+      break;
+    case 'update':
+      return [
+        body('name', "Email is required").exists(),
+        body('_id', "Invalid user details sent").exists(),
+        body('name', "Invalid Email format").isEmail(),
+        body('designation', "Designation is required").exists(),
+        body('name').custom(val => {
+          return userModel.isValid({ name: val, userType: 'user' }).then(user => {
+            if (user) {
+              return Promise.reject('Email already taken. Please choose another one');
+            }
+          });
+        })
+      ]
+      break;
+    case 'login':
+      return [
+        body('user.name', "Email is required").exists(),
+        body('user.password', "Password is required").exists(),
+      ]
+      break;
+    case 'passwordValidation':
+      return [
+        body('password', "Password is required").exists(),
+        body('currentPassword', "Current password is required").exists()
+      ]
+      break;
+  }
+}
 // create new user route
 exports.create = async (req, res) => {
-  const { body: { user } } = req;
-  user.organization = req.admin.organization;
-  if (!user.name) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Email is required',
-      },
-    });
-  }
+  try {
+    const validResult = await validationResult(req).formatWith(errorFormatter);
+    if (!validResult.isEmpty()) {
+      res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+      return;
+    }
+    const { body: { user } } = req;
+    user.organization = req.admin.organization;
 
-  if (!user.designation) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Designation is required',
-      },
-    });
-  }
+    Users.findOne({ name: user.name, userType: 'user', organization: user.organization }, { _id: 1 }, (err, result) => {
+      if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
 
-  if (!user.password) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Password is required',
-      },
-    });
-  }
+      if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User already exists' } })
 
-  Users.findOne({ name: user.name, userType: 'user', organization: user.organization }, { _id: 1 }, (err, result) => {
-    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
+      orgModel.findOne({ _id: user.organization }, { name: 1 }, (err, result) => {
+        if (result) {
+          const finalUser = new Users(user);
+          finalUser.setPassword(user.password);
 
-    if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User already exists' } })
-
-    orgModel.findOne({ _id: user.organization }, { name: 1 }, (err, result) => {
-      if (result) {
-        const finalUser = new Users(user);
-        finalUser.setPassword(user.password);
-
-        return finalUser.save()
-          .then(() => res.json({ success: true, data: finalUser.toAuthJSON(), errors: {} }))
-          .catch(function (e) {
-            if (e.code == "11000") {
-              res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                  name: 'already exists',
-                }
-              });
-            } else {
-              res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                  message: e.errmsg,
-                }
-              });
+          return finalUser.save()
+            .then(() => res.json({ success: true, data: finalUser.toAuthJSON(), errors: {} }))
+            .catch(function (e) {
+              if (e.code == "11000") {
+                res.status(422).json({
+                  success: false,
+                  data: {},
+                  errors: {
+                    message: 'Name already exists',
+                  }
+                });
+              } else {
+                res.status(422).json({
+                  success: false,
+                  data: {},
+                  errors: {
+                    message: e.errmsg,
+                  }
+                });
+              }
+            })
+        } else {
+          return res.status(422).json({
+            success: false,
+            data: {},
+            errors: {
+              message: "Please add organization details before adding user",
             }
-          })
-      } else {
-        return res.status(422).json({
-          success: false,
-          data: {},
-          errors: {
-            message: "Please add organization details before adding user",
-          }
-        });
-      }
-    })
-  });
+          });
+        }
+      })
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+  }
 }
 // create new user route
 exports.update = async (req, res) => {
-
+  const validResult = await validationResult(req).formatWith(errorFormatter);
+  if (!validResult.isEmpty()) {
+    res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+    return;
+  }
   const user = req.body;
-  
-  if (!user._id) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Invalid Data',
-      },
-    });
-  }
 
-  if (!user.name) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Email is required',
-      },
-    });
-  }
-
-  if (!user.designation) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'Designation is required',
-      },
-    });
-  }
-
-  Users.findOne({ _id: user._id, userType: 'user', organization : req.admin.organization }, { _id: 1 }, (err, result) => {
-    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' }});
+  Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
 
     if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: ' User doesnot exists' } });
 
-    userModel.update({_id: result._id}, {name: user.name, designation: user.designation, permittedModules: user.permittedModules}, (err, result) => {
-      if(err){
+    userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, result) => {
+      if (err) {
         res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
-      }else{
-        res.json({ 'success': true, data: {"message": "User Details Updated Successfully"}, errors: {} });
+      } else {
+        res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} });
       }
     });
   });
 }
 // delete user route
 exports.delete = async (req, res) => {
-  Users.findOne({ _id: req.params.user, userType: 'user', organization : req.admin.organization }, { _id: 1 }, (err, result) => {
+  Users.findOne({ _id: req.params.user, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
     if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
 
     if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } })
 
-    userModel.remove({_id: req.params.user}, (err, result) => {
-      if(err){
+    userModel.remove({ _id: req.params.user }, (err, result) => {
+      if (err) {
         res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } })
-      }else{
-        res.json({ 'success': true, data: {"message": "User deleted successfully"}, errors: {} });
+      } else {
+        res.json({ 'success': true, data: { "message": "User deleted successfully" }, errors: {} });
       }
     });
   });
 }
 // user login route
 exports.login = async (req, res, next) => {
+  const validResult = await validationResult(req).formatWith(errorFormatter);
+  if (!validResult.isEmpty()) {
+    res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+    return;
+  }
   const { body: { user } } = req;
-
-  if (!user.name) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'name is required',
-      },
-    });
-  }
-
-  if (!user.password) {
-    return res.status(422).json({
-      success: false,
-      data: {},
-      errors: {
-        message: 'password is required',
-      },
-    });
-  }
-
   // Attach user type
   user.role = "user";
   return passport.authenticate('local', { session: false }, (err, passportUser, info) => {
@@ -186,7 +174,7 @@ exports.login = async (req, res, next) => {
         if (err) {
           return res.status(500).json({ 'success': false, data: {}, errors: {} });
         } else {
-          if(user.modules.length){
+          if (user.modules.length) {
             let userMods = [];
             _.forEach(user.modules, (module) => {
               modulesModel.findOne({ _id: module }, { title: 1, parent: 1, link: 1, _id: 0 }, (err, moduleResponse) => {
@@ -198,8 +186,8 @@ exports.login = async (req, res, next) => {
                 }
               });
             });
-          }else{
-            return res.status(400).json({ 'success': false, data: {}, errors: {"message": "No Modules assigned. Contact Administrator"} });
+          } else {
+            return res.status(400).json({ 'success': false, data: {}, errors: { "message": "No Modules assigned. Contact Administrator" } });
           }
         }
       });
@@ -211,7 +199,7 @@ exports.login = async (req, res, next) => {
 }
 // Get all users
 exports.fetch = async (req, res) => {
-  Users.find({userType: "user", organization: req.admin.organization}, {hash:0, salt:0, organization:0, __v:0, userType:0}, (err, result) => {
+  Users.find({ userType: "user", organization: req.admin.organization }, { hash: 0, salt: 0, organization: 0, __v: 0, userType: 0 }, (err, result) => {
     if (err) {
       res.status(500).json({ success: false, data: {}, errors: err });
     } else {
@@ -242,6 +230,12 @@ exports.find = async (req, res) => {
 // Change Password route
 exports.changePassword = async (req, res) => {
 
+  const validResult = await validationResult(req).formatWith(errorFormatter);
+  if (!validResult.isEmpty()) {
+    res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+    return;
+  }
+
   let reqBody = req.body;
   let password = reqBody.currentPassword;
   Users.findById(req.user.id)
@@ -257,33 +251,6 @@ exports.changePassword = async (req, res) => {
         return res.status(400).json({ success: false, data: {}, errors: {} })
       }
     });
-}
-// update user module route
-exports.updatePermissions = async (req, res) => {
-  let reqBody = req.body;
-  if (reqBody.permittedModules != undefined) {
-    async.eachSeries(reqBody.permittedModules, function (module, modulescallback) {
-      modulesModel.findOne({ title: module }, { _id: 1 }, (err, result) => {
-        if (result) {
-          modulescallback()
-        } else {
-          return res.status(422).json({ success: false, data: {}, errors: { 'message': "Invalid Modules Sent" } });
-        }
-      });
-
-    }, function (done) {
-      Users.update({ _id: reqBody.id }, { permittedModules: reqBody.permittedModules }, (err, result) => {
-        if (err) {
-          res.status(500).json({ success: false, data: {}, errors: err });
-        } else {
-          res.status(200).json({ success: true, data: {}, errors: {}, message: "Updated Successfully" });
-        }
-      });
-    });
-
-  } else {
-    res.status(422).json({ success: false, data: {}, errors: { "message": "Please resend request with modules parameter" } });
-  }
 }
 // validate user module route
 exports.checkPermissions = async (req, res) => {
