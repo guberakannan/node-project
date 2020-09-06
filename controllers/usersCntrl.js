@@ -33,14 +33,7 @@ exports.validate = (method) => {
         body('name', "Email is required").exists(),
         body('_id', "Invalid user details sent").exists(),
         body('name', "Invalid Email format").isEmail(),
-        body('designation', "Designation is required").exists(),
-        body('name').custom(val => {
-          return userModel.isValid({ name: val, userType: 'user' }).then(user => {
-            if (user) {
-              return Promise.reject('Email already taken. Please choose another one');
-            }
-          });
-        })
+        body('designation', "Designation is required").exists()
       ]
       break;
     case 'login':
@@ -123,17 +116,23 @@ exports.update = async (req, res) => {
   }
   const user = req.body;
 
-  Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+  Users.findOne({ name: user.name, _id: { $ne: user._id }, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
     if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
 
-    if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: ' User doesnot exists' } });
+    if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Email already Taken' } });
 
-    userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, result) => {
-      if (err) {
-        res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
-      } else {
-        res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} });
-      }
+    Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+      if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+
+      if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } });
+
+      userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, result) => {
+        if (err) {
+          res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+        } else {
+          res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} });
+        }
+      });
     });
   });
 }
