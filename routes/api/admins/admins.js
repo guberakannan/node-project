@@ -1,15 +1,20 @@
 const router = require('express').Router();
 const adminAuth = require('../../adminAuth');
+const superAdminAuth = require('../../superAdminAuth');
 const adminsCntrl = require('../../../controllers/adminsCntrl');
 const modulesCntrl = require('../../../controllers/modulesCntrl');
-// create new user route
-router.post('/new-user', adminAuth.optional,  adminsCntrl.validate('create'), adminsCntrl.create);
+// create admin route
+router.post('/', superAdminAuth.required, adminsCntrl.validate('create'), adminsCntrl.create);
+// Update admin route
+router.put('/', superAdminAuth.required, adminsCntrl.validate('update'), adminsCntrl.update);
 // admin login route
 router.post('/login', adminAuth.optional, adminsCntrl.validate('login'), adminsCntrl.login);
+// Delete Admin
+router.delete('/:identifier', superAdminAuth.required, adminsCntrl.validate('delete'), adminsCntrl.delete);
 // Get all admins
-router.get('/', adminAuth.required, adminsCntrl.fetch);
+router.get('/', superAdminAuth.required, adminsCntrl.fetch);
 // Find specific admin detail
-router.get('/find', adminAuth.required, adminsCntrl.find);
+router.get('/find', superAdminAuth.required, adminsCntrl.find);
 // Change Password route
 router.put('/change-password', adminAuth.required, adminsCntrl.validate('passwordValidation'), adminsCntrl.changePassword);
 // Get Modules

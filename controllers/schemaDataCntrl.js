@@ -76,7 +76,6 @@ exports.create = async (req, res) => {
                                     for (let index in onlyNames ) {
                                         values[outerInc].push([data[onlyNames[index]]]);
                                     }
-
                                     outerInc++;
                                     innerCB();
                                 }, function (err, done) {

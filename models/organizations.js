@@ -9,7 +9,11 @@ const OrganizationsSchema = new Schema({
     },
     logo: {
         type: String,
-        default: '/api/static/organizations/org-logo.jpg'
+        default: '/api/static/default/org-logo.jpg'
+    },
+    logoname:{
+        type: String,
+        required:true
     },
     lastUpdatedDate: {
         type: Date,

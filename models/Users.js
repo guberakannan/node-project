@@ -57,6 +57,9 @@ UsersSchema.methods.generateJWT = function () {
     case "admin":
       secret = "_d3y%~PM.Y)jq?J";
       break;
+    case "superadmin":
+      secret = "VS7LYaW9L#54mDXz";
+      break;
     default:
       secret = "Kq[=7g3QKfDTEpr";
       break;

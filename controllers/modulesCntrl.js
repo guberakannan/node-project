@@ -1,66 +1,65 @@
 const modulesModel = require('../models/modules');
 const userModel = require('../models/Users')
+const { body, validationResult } = require('express-validator/check');
+const errorFormatter = ({ location, msg, param, value, nestedErrors }) => {
+    return `${msg}`;
+};
 
-exports.create = (req, res) => {
+exports.validate = (method) => {
+    switch (method) {
+        case 'create':
+            return [
+                body('title', "Module Name is required").exists(),
+                body('link', "Module Link is required").exists(),
+                body('content', "Module content is required").exists(),
+            ]
+            break;
+        case 'update':
+            return [
+                body('title', "Module Name is required").exists(),
+                body('link', "Module Link is required").exists(),
+                body('content', "Module content is required").exists(),
+            ]
+            break;
+
+    }
+}
+exports.create = async (req, res) => {
     try {
+        const validResult = await validationResult(req).formatWith(errorFormatter);
+        if (!validResult.isEmpty()) {
+            res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+            return;
+        }
+        let moduleData = req.body;
+        moduleData.link = "/user/pages/" + moduleData.link;
+        moduleData.organization = req.admin.organization;
+        modulesModel.findOne({ title: moduleData.title, organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+            if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
 
-        if (!req.body.title) {
-            return res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                    message: 'Module name is required',
-                },
+            if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Module already exists. Choose another name' } });
+            modulesModel.create(moduleData, (err, result) => {
+                if (err) {
+                    res.status(500).json({ "success": false, errors: {message: err}, data: {} })
+                } else {
+                    res.status(200).json({ "success": true, errors: {}, data: result })
+                }
             });
-        }
-
-        if (!req.body.link) {
-            return res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                    message: 'Module link is required',
-                },
-            });
-        }
-        
-        if (!req.body.content) {
-            return res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                    message: 'Module content is required',
-                },
-            });
-        }
-        req.body.link = "/user/pages/"+req.body.link;
-        req.body.organization = req.admin.organization;
-        modulesModel.create(req.body, (err, result) => {
-            if (err) {
-                res.status(500).json({ "success": false, error: err, data: {} })
-            } else {
-                res.status(200).json({ "success": true, error: {}, data: result })
-            }
         });
-    } catch (error) {
-        res.status(500).json({ "success": false, error: error, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: {message: errors}, data: {} })
     }
 }
 
 // update module route
 exports.update = async (req, res) => {
     try {
-        const moduleData = req.body;
-
-        if (!moduleData.content) {
-            return res.status(422).json({
-                success: false,
-                data: {},
-                errors: {
-                    message: 'Module content is required',
-                },
-            });
+        const validResult = await validationResult(req).formatWith(errorFormatter);
+        if (!validResult.isEmpty()) {
+            res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+            return;
         }
+        const moduleData = req.body;
 
         modulesModel.findOne({ _id: { $ne: moduleData._id }, title: moduleData.title, organization: req.admin.organization }, { _id: 1 }, (err, result) => {
             if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
@@ -71,7 +70,7 @@ exports.update = async (req, res) => {
                 if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
 
                 if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Module doesnot exists' } });
-                moduleData.link = "/user/pages/"+moduleData.link
+                moduleData.link = "/user/pages/" + moduleData.link
                 modulesModel.update({ _id: result._id }, { title: moduleData.title, link: moduleData.link, content: moduleData.content, parent: moduleData.parent }, (err, result) => {
                     if (err) {
                         res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
@@ -81,8 +80,8 @@ exports.update = async (req, res) => {
                 });
             });
         });
-    } catch (error) {
-        res.status(500).json({ "success": false, error: error, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: {message: errors}, data: {} })
     }
 }
 
@@ -90,14 +89,14 @@ exports.fetch = (req, res) => {
     try {
         modulesModel.find({ organization: req.admin.organization }, (err, result) => {
             if (err) {
-                res.status(500).json({ "success": false, error: err, data: {} })
+                res.status(500).json({ "success": false, errors: err, data: {} })
             } else {
-                res.status(200).json({ "success": true, error: {}, data: result })
+                res.status(200).json({ "success": true, errors: {}, data: result })
             }
         });
 
-    } catch (error) {
-        res.status(500).json({ "success": false, error: err, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: {message: errors}, data: {} })
     }
 }
 // delete module route
@@ -121,7 +120,7 @@ exports.delete = async (req, res) => {
             });
         });
 
-    } catch (error) {
-        res.status(500).json({ "success": false, error: err, data: {} })
+    } catch (errors) {
+        res.status(500).json({ "success": false, errors: {message: errors}, data: {} })
     }
 }
