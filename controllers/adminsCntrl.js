@@ -249,7 +249,7 @@ exports.changePassword = async (req, res) => {
         let reqBody = req.body;
         let password = reqBody.currentPassword;
 
-        Users.findById(req.admin.id)
+        Users.findById(req.superadmin.id)
             .then((userinfo) => {
                 let userRecord = new Users(userinfo)
                 let validated = userRecord.verifyPassword(password, userinfo.salt, userinfo.hash);
