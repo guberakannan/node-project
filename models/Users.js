@@ -25,7 +25,7 @@ const UsersSchema = new Schema({
   },
   userType: {
     type: String,
-    enum : ['user', 'admin'],
+    enum : ['user', 'admin', 'superadmin'],
     default: 'user'
   },
   permittedModules: [],
