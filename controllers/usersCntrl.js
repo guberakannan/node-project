@@ -121,16 +121,24 @@ exports.update = async (req, res) => {
 
     if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Email already Taken' } });
 
-    Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+    Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, {}, (err, result) => {
       if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
 
       if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } });
 
-      userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, result) => {
+      userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, updated) => {
         if (err) {
           res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
         } else {
-          res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} });
+          if(user.password != "" && user.password != undefined){
+            const finalUser = new Users(result);
+            finalUser.setPassword(user.password);
+  
+            return finalUser.save()
+              .then(() => res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} }))
+          }else{
+            res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} })
+          }
         }
       });
     });
