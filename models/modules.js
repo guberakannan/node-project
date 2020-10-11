@@ -17,6 +17,10 @@ const ModulesSchema = new Schema({
   content: {
     type: String
   },
+  pageTitle: {
+    type: String,
+    required: true,
+  },
   createdDate: {
     type: Date,
     default: Date.now

@@ -9,16 +9,18 @@ exports.validate = (method) => {
     switch (method) {
         case 'create':
             return [
-                body('title', "Module Name is required").exists(),
-                body('link', "Module Link is required").exists(),
-                body('content', "Module content is required").exists(),
+                body('title', "Module Name is required").exists({checkFalsy: true}),
+                body('link', "Module Link is required").exists({checkFalsy: true}),
+                body('content', "Module content is required").exists({checkFalsy: true}),
+                body('pageTitle', "Module Title is required").exists({checkFalsy: true}),
             ]
             break;
         case 'update':
             return [
-                body('title', "Module Name is required").exists(),
-                body('link', "Module Link is required").exists(),
-                body('content', "Module content is required").exists(),
+                body('title', "Module Name is required").exists({checkFalsy: true}),
+                body('link', "Module Link is required").exists({checkFalsy: true}),
+                body('content', "Module content is required").exists({checkFalsy: true}),
+                body('pageTitle', "Module Title is required").exists({checkFalsy: true}),
             ]
             break;
 
@@ -71,7 +73,7 @@ exports.update = async (req, res) => {
 
                 if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Module doesnot exists' } });
                 moduleData.link = "/user/pages/" + moduleData.link
-                modulesModel.update({ _id: result._id }, { title: moduleData.title, link: moduleData.link, content: moduleData.content, parent: moduleData.parent }, (err, result) => {
+                modulesModel.update({ _id: result._id }, { title: moduleData.title, link: moduleData.link, content: moduleData.content, parent: moduleData.parent, pageTitle:moduleData.pageTitle }, (err, result) => {
                     if (err) {
                         res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
                     } else {

@@ -109,40 +109,44 @@ exports.create = async (req, res) => {
 }
 // create new user route
 exports.update = async (req, res) => {
-  const validResult = await validationResult(req).formatWith(errorFormatter);
-  if (!validResult.isEmpty()) {
-    res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
-    return;
-  }
-  const user = req.body;
-
-  Users.findOne({ name: user.name, _id: { $ne: user._id }, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
-    if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
-
-    if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Email already Taken' } });
-
-    Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, {}, (err, result) => {
-      if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
-
-      if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } });
-
-      userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, updated) => {
-        if (err) {
-          res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
-        } else {
-          if(user.password != "" && user.password != undefined){
-            const finalUser = new Users(result);
-            finalUser.setPassword(user.password);
+  try{
+    const validResult = await validationResult(req).formatWith(errorFormatter);
+    if (!validResult.isEmpty()) {
+      res.status(422).json({ "success": false, errors: validResult.array()[0], data: {} });
+      return;
+    }
+    const user = req.body;
   
-            return finalUser.save()
-              .then(() => res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} }))
-          }else{
-            res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} })
+    Users.findOne({ name: user.name, _id: { $ne: user._id }, userType: 'user', organization: req.admin.organization }, { _id: 1 }, (err, result) => {
+      if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+  
+      if (result) return res.status(422).json({ success: false, data: {}, errors: { message: 'Email already Taken' } });
+  
+      Users.findOne({ _id: user._id, userType: 'user', organization: req.admin.organization }, {}, (err, result) => {
+        if (err) return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+  
+        if (!result) return res.status(422).json({ success: false, data: {}, errors: { message: 'User doesnot exists' } });
+  
+        userModel.update({ _id: result._id }, { name: user.name, designation: user.designation, permittedModules: user.permittedModules }, (err, updated) => {
+          if (err) {
+            res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+          } else {
+            if(user.password != "" && user.password != undefined){
+              const finalUser = new Users(result);
+              finalUser.setPassword(user.password);
+    
+              return finalUser.save()
+                .then(() => res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} }))
+            }else{
+              res.json({ 'success': true, data: { "message": "User Details Updated Successfully" }, errors: {} })
+            }
           }
-        }
+        });
       });
     });
-  });
+  }catch(error){
+    return res.status(500).json({ success: false, data: {}, errors: { message: 'Internal server error' } });
+  }
 }
 // delete user route
 exports.delete = async (req, res) => {
@@ -267,7 +271,8 @@ exports.checkPermissions = async (req, res) => {
       if (moduleInfo) {
         Users.findOne({ _id: req.user.id, permittedModules: moduleInfo._id.toString() }, {}, (err, result) => {
           if (result) {
-            res.status(200).json({ success: true, data: moduleInfo.content, errors: {} });
+            let pageTitle = (moduleInfo.pageTitle) ? moduleInfo.pageTitle: "Dynamic Module Title";
+            res.status(200).json({ success: true, data: {content: moduleInfo.content, title: pageTitle}, errors: {} });
           } else {
             res.status(401).json({ success: false, data: {}, errors: { "message": "Permission Denied" } });
           }
