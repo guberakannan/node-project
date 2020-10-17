@@ -5,7 +5,8 @@ const Users = mongoose.model('Users');
 const orgModel = require('../models/organizations')
 const userModel = require('../models/Users')
 const modulesModel = require('../models/modules');
-var async = require('async');
+const async = require('async');
+const activitylogsModel = require('../models/activityLogs')
 const { body, validationResult } = require('express-validator/check');
 const errorFormatter = ({ location, msg, param, value, nestedErrors }) => {
   return `${msg}`;
@@ -272,6 +273,7 @@ exports.checkPermissions = async (req, res) => {
         Users.findOne({ _id: req.user.id, permittedModules: moduleInfo._id.toString() }, {}, (err, result) => {
           if (result) {
             let pageTitle = (moduleInfo.pageTitle) ? moduleInfo.pageTitle: "Dynamic Module Title";
+            activitylogsModel.create({user : req.user.name, module: moduleInfo.title, organization: req.user.organization}, (err, result)=>{})
             res.status(200).json({ success: true, data: {content: moduleInfo.content, title: pageTitle}, errors: {} });
           } else {
             res.status(401).json({ success: false, data: {}, errors: { "message": "Permission Denied" } });

@@ -3,6 +3,8 @@ const adminAuth = require('../../adminAuth');
 const superAdminAuth = require('../../superAdminAuth');
 const adminsCntrl = require('../../../controllers/adminsCntrl');
 const modulesCntrl = require('../../../controllers/modulesCntrl');
+const acitvityLogCntrl = require('../../../controllers/acitvityLogCntrl');
+
 // create admin route
 router.post('/', superAdminAuth.required, adminsCntrl.validate('create'), adminsCntrl.create);
 // Update admin route
@@ -19,5 +21,7 @@ router.get('/find', superAdminAuth.required, adminsCntrl.find);
 router.put('/change-password', adminAuth.required, adminsCntrl.validate('passwordValidation'), adminsCntrl.changePassword);
 // Get Modules
 router.get('/get-modules', adminAuth.required, modulesCntrl.fetch);
+// Activity Log
+router.get('/activity-log', adminAuth.required, acitvityLogCntrl.fetch);
 
 module.exports = router;
